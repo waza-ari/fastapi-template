@@ -4,6 +4,7 @@ Application wide settings read from env variables
 
 import pathlib
 from enum import Enum
+from urllib.parse import quote
 
 from pydantic_settings import BaseSettings
 from starlette.config import Config
@@ -40,10 +41,10 @@ class PostgresSettings(BaseSettings):
     POSTGRES_SERVER: str = config("POSTGRES_SERVER", default="localhost")
     POSTGRES_PORT: int = config("POSTGRES_PORT", default=5432)
     POSTGRES_DB: str = config("POSTGRES_DB", default="postgres")
-    POSTGRES_ASYNC_PREFIX: str = config("POSTGRES_ASYNC_PREFIX", default="postgresql+asyncpg://")
-    POSTGRES_URI: str = (
-        f"{POSTGRES_ASYNC_PREFIX}{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_SERVER}:{POSTGRES_PORT}/{POSTGRES_DB}"
+    POSTGRES_ASYNC_PREFIX: str = config(
+        "POSTGRES_ASYNC_PREFIX", default="postgresql+asyncpg://"
     )
+    POSTGRES_URI: str = f"{POSTGRES_ASYNC_PREFIX}{POSTGRES_USER}:{quote(POSTGRES_PASSWORD)}@{POSTGRES_SERVER}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
 
 class RedisQueueSettings(BaseSettings):
@@ -70,7 +71,9 @@ class EnvironmentSettings(BaseSettings):
     Environment Settings
     """
 
-    ENVIRONMENT: EnvironmentOption = config("ENVIRONMENT", default=EnvironmentOption.LOCAL)
+    ENVIRONMENT: EnvironmentOption = config(
+        "ENVIRONMENT", default=EnvironmentOption.LOCAL
+    )
 
 
 class Settings(
