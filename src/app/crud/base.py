@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Base
+from app.models.base import Base
 
 ModelType = TypeVar("ModelType", bound=Base)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
@@ -50,18 +50,30 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     async def get_deleted(self, db: AsyncSession, id: Any) -> ModelType | None:
         return await db.scalar(select(self.model).filter_by(id=id))
 
-    async def get_paginated(self, db: AsyncSession, query_filter=None) -> Page[ModelType]:
+    async def get_paginated(
+        self, db: AsyncSession, query_filter=None
+    ) -> Page[ModelType]:
         return await paginate(db, self._get(query_filter))
 
     async def get_multi(
-        self, db: AsyncSession, query_filter: Filter = None, skip: int = 0, limit: int = 100
+        self,
+        db: AsyncSession,
+        query_filter: Filter = None,
+        skip: int = 0,
+        limit: int = 100,
     ) -> Sequence[ModelType]:
-        return (await db.scalars(self._get(query_filter).offset(skip).limit(limit))).all()
+        return (
+            await db.scalars(self._get(query_filter).offset(skip).limit(limit))
+        ).all()
 
-    async def get_all(self, db: AsyncSession, query_filter: Filter = None) -> Sequence[ModelType]:
+    async def get_all(
+        self, db: AsyncSession, query_filter: Filter = None
+    ) -> Sequence[ModelType]:
         return (await db.scalars(self._get(query_filter))).all()
 
-    async def get_all_deleted(self, db: AsyncSession, query_filter: Filter = None) -> Sequence[ModelType] | None:
+    async def get_all_deleted(
+        self, db: AsyncSession, query_filter: Filter = None
+    ) -> Sequence[ModelType] | None:
         query = select(self.model)
         if query_filter:
             query = query_filter.filter(query)
@@ -77,7 +89,9 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await db.refresh(db_obj)
         return db_obj
 
-    async def update(self, db: AsyncSession, id: Any, obj_in: UpdateSchemaType | dict[str, Any]) -> ModelType:
+    async def update(
+        self, db: AsyncSession, id: Any, obj_in: UpdateSchemaType | dict[str, Any]
+    ) -> ModelType:
         # Fetch data first
         db_obj = await self.get(db, id)
 
