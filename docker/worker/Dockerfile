@@ -29,7 +29,6 @@ COPY --from=dependencies-stage /app/.venv /app/.venv
 
 # Add required files
 ADD ./src /app/src
-ADD ./templates /app/templates
 ADD ./docker/worker/worker-start.sh /app/start.sh
 ADD ./pyproject.toml /app/pyproject.toml
 
