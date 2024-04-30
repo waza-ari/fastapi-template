@@ -12,7 +12,7 @@ from makefun import with_signature
 from pydantic import BaseModel
 
 from app.crud.base import CRUDBase
-from app.models import Base
+from app.models.base import Base
 
 from .logger import FastAPIStructLogger
 
@@ -79,7 +79,9 @@ class CrudEndpointCreator:
     def _read_items(self):
         """Creates an endpoint for reading all items from the database."""
 
-        @with_signature(Signature(self.parameters, return_annotation=Sequence[self.schema]))
+        @with_signature(
+            Signature(self.parameters, return_annotation=Sequence[self.schema])
+        )
         async def endpoint(*args, **kwargs):
             log = kwargs.get("log")
             log.bind(db_model=self.model.__name__)
@@ -96,12 +98,16 @@ class CrudEndpointCreator:
         Creates an endpoint for reading all deleted items from the database.
         """
 
-        @with_signature(Signature(self.parameters, return_annotation=Sequence[self.schema]))
+        @with_signature(
+            Signature(self.parameters, return_annotation=Sequence[self.schema])
+        )
         async def endpoint(*args, **kwargs):
             log = kwargs.get("log")
             log.bind(db_model=self.model.__name__)
             log.info("Reading all deleted database entries using CRUD read endpoint")
-            items = await self.crud.get_all_deleted(db.session, kwargs.get("filter") or None)
+            items = await self.crud.get_all_deleted(
+                db.session, kwargs.get("filter") or None
+            )
             log.bind(found_items=len(items))
             log.info("Database entries read successfully")
             return items  # pragma: no cover
@@ -112,14 +118,18 @@ class CrudEndpointCreator:
         """Creates an endpoint for reading multiple items from the database with pagination."""
 
         @with_signature(
-            func_signature=Signature(self.parameters, return_annotation=Page[self.schema]),
+            func_signature=Signature(
+                self.parameters, return_annotation=Page[self.schema]
+            ),
             func_name="read_paginated",
         )
         async def endpoint(*args, **kwargs):
             log = kwargs.get("log")
             log.bind(db_model=self.model.__name__)
             log.info("Reading multiple database entries using CRUD read endpoint")
-            return await self.crud.get_paginated(db.session, kwargs.get("filter") or None)
+            return await self.crud.get_paginated(
+                db.session, kwargs.get("filter") or None
+            )
 
         return endpoint
 
@@ -234,7 +244,9 @@ class CrudEndpointCreator:
 
         return endpoint
 
-    def add_routes_to_router(self, router: APIRouter, tags: list[str | Enum] | None = None):
+    def add_routes_to_router(
+        self, router: APIRouter, tags: list[str | Enum] | None = None
+    ):
         router.add_api_route(
             "/all",
             self._read_items(),
