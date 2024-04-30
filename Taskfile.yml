@@ -1,0 +1,32 @@
+version: '3'
+
+dotenv: ['.env', '{{.ENV}}/.env.', '{{.HOME}}/.env']
+
+tasks:
+  inits:
+    cmds:
+      - poetry run python src/helper/generate_inits.py
+      - poetry run ruff check --fix src/app/schemas/__init__.py src/app/models/__init__.py src/app/crud/__init__.py
+      - poetry run ruff format src/app/schemas/__init__.py src/app/models/__init__.py src/app/crud/__init__.py
+
+  lint:
+    cmds:
+      - poetry run ruff check src --fix
+      - poetry run ruff format src
+
+  build:
+    cmds:
+      - docker build -t api:development -f docker/api/Dockerfile  .
+      - docker build -t worker:development -f docker/worker/Dockerfile  .
+
+  dev:
+    cmds:
+      - poetry run uvicorn app.main:app --reload --host 0.0.0.0 --log-config uvicorn_disable_logging.json
+
+  run:
+    cmds:
+      - LOG_JSON_FORMAT=true poetry run uvicorn app.main:app --reload --host 0.0.0.0 --log-config uvicorn_disable_logging.json
+
+  worker:
+    cmds:
+      - poetry run arq app.worker.settings.WorkerSettings --watch .

@@ -1,0 +1,87 @@
+[tool.poetry]
+name = "{{ project_slug }}"
+version = "0.0.1"
+description = "{{ project_name }}"
+authors = ["{{ author }} <{{ author_email }}>"]
+packages = [{ include = "app", from="src" }]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pydantic-settings = "^2.2.1"
+asyncpg = "^0.29.0"
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.29"}
+alembic = "^1.13.1"
+pydantic = {extras = ["email"], version = "^2.7.1"}
+structlog = "^24.1.0"
+
+[tool.poetry.group.api.dependencies]
+fastapi = "^0.110.2"
+uvicorn = "^0.29.0"
+asgi-correlation-id = "^4.3.1"
+asgiref = "^3.8.1"
+fastapi-pagination = "^0.12.24"
+fastapi-filter = {extras = ["sqlalchemy"], version = "^1.1.0"}
+makefun = "^1.15.2"
+fastapi-async-sqlalchemy = "^0.6.1"
+
+[tool.poetry.group.worker.dependencies]
+uvloop = "^0.19.0"
+arq = "^0.25.0"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.4.1"
+watchfiles = "^0.21.0"
+ruff-lsp = "^0.0.53"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+fix = true
+src = ["src"]
+
+[tool.ruff.lint.isort]
+case-sensitive = true
+detect-same-package = true
+known-first-party = ["app"]
+
+[tool.ruff.lint]
+select = [
+    # https://docs.astral.sh/ruff/rules/#pyflakes-f
+    "F", # Pyflakes
+    # https://docs.astral.sh/ruff/rules/#pycodestyle-e-w
+    "E", # pycodestyle
+    "W", # Warning
+    # https://docs.astral.sh/ruff/rules/#flake8-comprehensions-c4
+    # https://docs.astral.sh/ruff/rules/#mccabe-c90
+    "C", # Complexity (mccabe+) & comprehensions
+    # https://docs.astral.sh/ruff/rules/#pyupgrade-up
+    "UP", # pyupgrade
+    # https://docs.astral.sh/ruff/rules/#isort-i
+    "I", # isort
+]
+ignore = [
+    # https://docs.astral.sh/ruff/rules/#pycodestyle-e-w
+    "E402", # module level import not at top of file
+    # https://docs.astral.sh/ruff/rules/#pyupgrade-up
+    "UP006", # use-pep585-annotation
+    "UP007", # use-pep604-annotation
+    "E741",  # Ambiguous variable name
+    # "UP035", # deprecated-assertion
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 24
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = [
+    "F401", # unused import
+    "F403", # star imports
+]

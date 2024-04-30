@@ -1,0 +1,117 @@
+import importlib.metadata
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import Any
+
+import structlog
+from anyio import to_thread
+from arq.connections import RedisSettings
+from asgi_correlation_id import CorrelationIdMiddleware
+from fastapi import APIRouter, FastAPI
+from fastapi_async_sqlalchemy import SQLAlchemyMiddleware
+from fastapi_pagination import add_pagination
+
+from .config import (
+    AppSettings,
+    EnvironmentSettings,
+    PostgresSettings,
+    RedisQueueSettings,
+    settings,
+)
+from .logger import setup_logging
+from .middleware import (
+    ExceptionHandlerMiddleware,
+    StructLogMiddleware,
+    XForwardedMiddleware,
+)
+from .queue import close_redis_queue_pool, create_redis_queue_pool
+
+setup_logging(json_logs=settings.LOG_JSON_FORMAT, log_level=settings.LOG_LEVEL)
+
+access_logger = structlog.stdlib.get_logger(settings.LOG_ACCESS_NAME)
+
+
+# -------------- application --------------
+async def set_threadpool_tokens(number_of_tokens: int = 100) -> None:
+    limiter = to_thread.current_default_thread_limiter()
+    limiter.total_tokens = number_of_tokens
+
+
+def lifespan_factory(
+    settings: AppSettings | RedisQueueSettings | EnvironmentSettings | PostgresSettings,
+):
+    """Factory to create a lifespan async context manager for a FastAPI app."""
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncGenerator:
+        await set_threadpool_tokens()
+
+        if isinstance(settings, RedisQueueSettings):
+            await create_redis_queue_pool(
+                RedisSettings(
+                    host=settings.REDIS_QUEUE_HOST, port=settings.REDIS_QUEUE_PORT
+                )
+            )
+
+        yield
+
+        if isinstance(settings, RedisQueueSettings):
+            await close_redis_queue_pool()
+
+    return lifespan
+
+
+# -------------- application --------------
+def create_application(
+    router: APIRouter,
+    settings: AppSettings | RedisQueueSettings | EnvironmentSettings | PostgresSettings,
+    **kwargs: Any,
+) -> FastAPI:
+    """
+    Creates and configures a FastAPI application based on the provided settings.
+    """
+
+    # --- before creating application ---
+    if isinstance(settings, AppSettings):
+        to_update = {
+            "title": settings.APP_NAME,
+            "description": settings.APP_DESCRIPTION,
+            "contact": {"name": settings.CONTACT_NAME, "email": settings.CONTACT_EMAIL},
+            "version": settings.APP_VERSION
+            or importlib.metadata.version("{{project_slug}}"),
+        }
+        kwargs.update(to_update)
+
+    lifespan = lifespan_factory(settings)
+
+    application = FastAPI(lifespan=lifespan, **kwargs)
+
+    # Order of middlewares is important. The first middleware in the list is the outermost middleware
+    # and therefore applied last.
+
+    application.add_middleware(
+        SQLAlchemyMiddleware,
+        db_url=settings.POSTGRES_URI,
+        engine_args={  # engine arguments example
+            "echo": False,  # print all SQL statements
+            "pool_pre_ping": True,
+            "pool_size": 5,  # number of connections to keep open at a time
+            "max_overflow": 10,  # number of connections to allow to be opened above pool_size
+        },
+    )
+
+    # noinspection PyTypeChecker
+    application.add_middleware(StructLogMiddleware)
+    # noinspection PyTypeChecker
+    application.add_middleware(XForwardedMiddleware)
+    # noinspection PyTypeChecker
+    application.add_middleware(CorrelationIdMiddleware)
+    # noinspection PyTypeChecker
+    application.add_middleware(ExceptionHandlerMiddleware)
+
+    # Add pagination
+    add_pagination(application)
+
+    application.include_router(router)
+
+    return application

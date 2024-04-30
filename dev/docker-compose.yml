@@ -1,0 +1,29 @@
+name: fastapi_boilerplate_dev
+
+volumes:
+  pgsql_data:
+  redis-data:
+
+
+services:
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    command: [ "redis-server", "--appendonly", "yes" ]
+    hostname: redis
+    volumes:
+      - redis-data:/data
+    ports:
+      - 6379:6379
+  db:
+    image: postgres
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: app
+    volumes:
+      - pgsql_data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
