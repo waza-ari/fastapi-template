@@ -29,6 +29,7 @@ class AppSettings(BaseSettings):
     LOG_ACCESS_NAME: str = config("LOG_ACCESS_NAME", default="access.logger")
     LOG_LEVEL: str = config("LOG_LEVEL", default="INFO")
     LOG_JSON_FORMAT: bool = config("LOG_JSON_FORMAT", default=False)
+    LOG_INCLUDE_STACK: bool = config("LOG_INCLUDE_STACK", default=True)
 
 
 class PostgresSettings(BaseSettings):
