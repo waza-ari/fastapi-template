@@ -119,12 +119,6 @@ def setup_logging(json_logs: bool = False, log_level: str = "INFO"):
 class FastAPIStructLogger:
     def __init__(self):
         self.logger = structlog.stdlib.get_logger(settings.LOG_NAME)
-        setattr(self, "debug", self.logger.debug)
-        setattr(self, "info", self.logger.info)
-        setattr(self, "warning", self.logger.warning)
-        setattr(self, "warn", self.logger.warning)
-        setattr(self, "error", self.logger.error)
-        setattr(self, "critical", self.logger.critical)
 
     @staticmethod
     def bind(**new_values: Any):
@@ -133,3 +127,23 @@ class FastAPIStructLogger:
     @staticmethod
     def unbind(*keys: str):
         structlog.contextvars.unbind_contextvars(*keys)
+
+    def debug(self, event: str | None = None, *args: Any, **kw: Any):
+        self.logger.debug(event, *args, **kw)
+
+    def info(self, event: str | None = None, *args: Any, **kw: Any):
+        self.logger.info(event, *args, **kw)
+
+    def warning(self, event: str | None = None, *args: Any, **kw: Any):
+        self.logger.warning(event, *args, **kw)
+
+    warn = warning
+
+    def error(self, event: str | None = None, *args: Any, **kw: Any):
+        self.logger.error(event, *args, **kw)
+
+    def critical(self, event: str | None = None, *args: Any, **kw: Any):
+        self.logger.critical(event, *args, **kw)
+
+    def exception(self, event: str | None = None, *args: Any, **kw: Any):
+        self.logger.exception(event, *args, **kw)
