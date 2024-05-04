@@ -1,19 +1,19 @@
 import uuid
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi_async_sqlalchemy import db
 
 from app import models, schemas
 from app.core import CrudEndpointCreator, FastAPIStructLogger, enqueue_job
 from app.crud import crud_hero
 
+log = FastAPIStructLogger()
 router = APIRouter(prefix="/hero", tags=["heroes"])
 
 
 # Demonstrate working with relationships
 @router.get("/{hero_id}/ability", response_model=schemas.HeroSchema)
-async def get_hero_ability(log: Annotated[FastAPIStructLogger, Depends()], hero_id: uuid.UUID):
+async def get_hero_ability(hero_id: uuid.UUID):
     log.bind(requested_hero_id=hero_id)
     hero = await crud_hero.get(db.session, hero_id)
     if not hero:
