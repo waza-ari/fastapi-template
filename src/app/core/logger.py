@@ -1,22 +1,10 @@
 import logging
-import sys
 from typing import Any
 
 import structlog
-from src.app.core.config import settings
 from structlog.types import EventDict, Processor
 
-
-# https://github.com/hynek/structlog/issues/35#issuecomment-591321744
-def rename_event_key(_, __, event_dict: EventDict) -> EventDict:
-    """
-    Log entries keep the text message in the `event` field, but Datadog
-    uses the `message` field. This processor moves the value from one field to
-    the other.
-    See https://github.com/hynek/structlog/issues/35#issuecomment-591321744
-    """
-    event_dict["message"] = event_dict.pop("event")
-    return event_dict
+from .config import settings
 
 
 def drop_color_message_key(_, __, event_dict: EventDict) -> EventDict:
@@ -43,9 +31,6 @@ def setup_logging(json_logs: bool = False, log_level: str = "INFO"):
     ]
 
     if json_logs:
-        # We rename the `event` key to `message` only in JSON logs, as Datadog looks for the
-        # `message` key but the pretty ConsoleRenderer looks for `event`
-        shared_processors.append(rename_event_key)
         # Format the exception only for JSON logs, as we want to pretty-print them when
         # using the ConsoleRenderer
         shared_processors.append(structlog.processors.format_exc_info)
@@ -98,22 +83,6 @@ def setup_logging(json_logs: bool = False, log_level: str = "INFO"):
     # hierarchy (effectively rendering them silent).
     logging.getLogger("uvicorn.access").handlers.clear()
     logging.getLogger("uvicorn.access").propagate = False
-
-    def handle_exception(exc_type, exc_value, exc_traceback):
-        """
-        Log any uncaught exception instead of letting it be printed by Python
-        (but leave KeyboardInterrupt untouched to allow users to Ctrl+C to stop)
-        See https://stackoverflow.com/a/16993115/3641865
-        """
-        if issubclass(exc_type, KeyboardInterrupt):
-            sys.__excepthook__(exc_type, exc_value, exc_traceback)
-            return
-
-        root_logger.error(
-            "Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback)
-        )
-
-    sys.excepthook = handle_exception
 
 
 class FastAPIStructLogger:

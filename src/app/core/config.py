@@ -23,6 +23,7 @@ class AppSettings(BaseSettings):
     APP_NAME: str = config("APP_NAME", default="FastAPI app")
     APP_DESCRIPTION: str | None = config("APP_DESCRIPTION", default=None)
     APP_VERSION: str | None = config("APP_VERSION", default=None)
+    APP_MAX_THREADS: int = config("APP_MAX_THREADS", default=100)
     CONTACT_NAME: str | None = config("CONTACT_NAME", default=None)
     CONTACT_EMAIL: str | None = config("CONTACT_EMAIL", default=None)
     LOG_NAME: str = config("LOG_NAME", default="app.logger")
@@ -42,9 +43,7 @@ class PostgresSettings(BaseSettings):
     POSTGRES_SERVER: str = config("POSTGRES_SERVER", default="localhost")
     POSTGRES_PORT: int = config("POSTGRES_PORT", default=5432)
     POSTGRES_DB: str = config("POSTGRES_DB", default="postgres")
-    POSTGRES_ASYNC_PREFIX: str = config(
-        "POSTGRES_ASYNC_PREFIX", default="postgresql+asyncpg://"
-    )
+    POSTGRES_ASYNC_PREFIX: str = config("POSTGRES_ASYNC_PREFIX", default="postgresql+asyncpg://")
     POSTGRES_URI: str = f"{POSTGRES_ASYNC_PREFIX}{POSTGRES_USER}:{quote(POSTGRES_PASSWORD)}@{POSTGRES_SERVER}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
 
@@ -72,9 +71,7 @@ class EnvironmentSettings(BaseSettings):
     Environment Settings
     """
 
-    ENVIRONMENT: EnvironmentOption = config(
-        "ENVIRONMENT", default=EnvironmentOption.LOCAL
-    )
+    ENVIRONMENT: EnvironmentOption = config("ENVIRONMENT", default=EnvironmentOption.LOCAL)
 
 
 class Settings(

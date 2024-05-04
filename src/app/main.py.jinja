@@ -1,0 +1,66 @@
+import importlib.metadata
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
+from anyio import to_thread
+from arq.connections import RedisSettings
+from asgi_correlation_id import CorrelationIdMiddleware
+from fastapi import FastAPI
+from fastapi_async_sqlalchemy import SQLAlchemyMiddleware
+from fastapi_pagination import add_pagination
+
+from app.api import router
+from app.core import settings, setup_logging
+from app.core.config import RedisQueueSettings
+from app.core.middleware import StructLogMiddleware, XForwardedMiddleware
+from app.core.queue import close_redis_queue_pool, create_redis_queue_pool
+
+setup_logging(json_logs=settings.LOG_JSON_FORMAT, log_level=settings.LOG_LEVEL)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator:
+    # Set number of tokens for the thread pool
+    limiter = to_thread.current_default_thread_limiter()
+    limiter.total_tokens = settings.APP_MAX_THREADS
+
+    if isinstance(settings, RedisQueueSettings):
+        await create_redis_queue_pool(RedisSettings(host=settings.REDIS_QUEUE_HOST, port=settings.REDIS_QUEUE_PORT))
+
+    yield
+
+    if isinstance(settings, RedisQueueSettings):
+        await close_redis_queue_pool()
+
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=importlib.metadata.version("{{project_slug}}"),
+    lifespan=lifespan,
+    description=settings.APP_DESCRIPTION,
+    contact={"name": settings.CONTACT_NAME, "email": settings.CONTACT_EMAIL},
+)
+
+app.add_middleware(
+    SQLAlchemyMiddleware,
+    db_url=settings.POSTGRES_URI,
+    engine_args={  # engine arguments example
+        "echo": False,  # print all SQL statements
+        "pool_pre_ping": True,
+        "pool_size": 5,  # number of connections to keep open at a time
+        "max_overflow": 10,  # number of connections to allow to be opened above pool_size
+    },
+)
+
+# noinspection PyTypeChecker
+app.add_middleware(StructLogMiddleware)
+# noinspection PyTypeChecker
+app.add_middleware(XForwardedMiddleware)
+# noinspection PyTypeChecker
+app.add_middleware(CorrelationIdMiddleware)
+
+# Add pagination
+add_pagination(app)
+
+# Add routers
+app.include_router(router)

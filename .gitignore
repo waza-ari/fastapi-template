@@ -152,3 +152,7 @@ cython_debug/
 .DS_Store
 
 .ruff_cache
+
+# REMOVE AFTER CLONING THE REPO!
+pyproject.toml
+src/app/main.py

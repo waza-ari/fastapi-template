@@ -1,5 +1,4 @@
 from arq.connections import ArqRedis, RedisSettings, create_pool
-from asgi_correlation_id import correlation_id
 
 pool: ArqRedis | None = None
 
@@ -11,7 +10,7 @@ async def create_redis_queue_pool(settings: RedisSettings) -> None:
 
 async def close_redis_queue_pool() -> None:
     global pool
-    await pool.aclose()
+    await pool.close()
 
 
 async def enqueue_job(job_name: str, *args, **kwargs) -> None:
@@ -27,4 +26,4 @@ async def enqueue_job(job_name: str, *args, **kwargs) -> None:
     if pool is None:
         raise ValueError("Redis pool not initialized")
 
-    await pool.enqueue_job(job_name, cid=correlation_id.get(), *args, **kwargs)
+    await pool.enqueue_job(job_name, *args, **kwargs)

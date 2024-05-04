@@ -29,4 +29,4 @@ tasks:
 
   worker:
     cmds:
-      - poetry run arq app.worker.settings.WorkerSettings --watch .
+      - poetry run arq worker.settings.WorkerSettings --watch .
